@@ -1,17 +1,18 @@
 import { pool } from "../plugins/pg";
 import { apiErrors } from "../utils/apiErrors";
+import { PlaceSchema } from "../validation/places.validate";
 
-export interface IPlaceBody {
-  user_id: number;
-  country_id: number;
-  title: string;
-  description: string;
-  city: string;
-  type: "Beach" | "Culture" | "Adventure" | "Nature" | "City";
-  price: number;
-}
+// export interface IPlaceBody {
+//   user_id: number;
+//   country_id: number;
+//   title: string;
+//   description: string;
+//   city: string;
+//   type: "Beach" | "Culture" | "Adventure" | "Nature" | "City";
+//   price: number;
+// }
 
-export const postPlaceService = async (body: IPlaceBody) => {
+export const postPlaceService = async (body: PlaceSchema) => {
   const result = await pool.query(
     `
         insert into places
@@ -70,7 +71,7 @@ export const deletePlaceService = async (id: number) => {
 
 export const updatePlaceService = async (
   id: number,
-  body: Partial<IPlaceBody>,
+  body: Partial<PlaceSchema>,
 ) => {
   const result = await pool.query(
     `

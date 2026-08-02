@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const userSchema = z.object({
+export const registerSchema = z.object({
   name: z
     .string()
     .trim()
@@ -17,9 +17,13 @@ export const userSchema = z.object({
     .string()
     .min(6, "Пароль должен содержать минимум 6 символов")
     .max(100, "Пароль не должен превышать 100 символов"),
-
-    avatar: z
-    .string().url("Введите корректный url")
 });
 
-export type UserSchema = z.infer<typeof userSchema>;
+export const loginSchema = z.object({
+  email: z.string().trim().email("Введите корректный email"),
+
+  password: z.string().min(6, "Пароль должен содержать минимум 6 символов"),
+});
+
+export type RegisterSchema = z.infer<typeof registerSchema>;
+export type LoginSchema = z.infer<typeof loginSchema>;
