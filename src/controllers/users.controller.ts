@@ -1,11 +1,16 @@
 import { NextFunction, Request, Response } from "express";
-import { userSchema } from "../validation/users.validate";
 import {
   deleteUserService,
   getOneUserService,
+  getUserPlacesService,
   getUsersService,
   updateUserService,
 } from "../services/users.service";
+import {
+  UpdateUserSchema,
+  updateUserSchema,
+  userSchema,
+} from "../validation/users.validate";
 
 export const getUsersController = async (
   req: Request,
@@ -19,48 +24,65 @@ export const getUsersController = async (
       message: "Users received successfully",
       data: result,
     });
-  } catch (error: any) {
-    next(error.message);
+  } catch (error) {
+    next(error);
   }
 };
 
 export const getOneUserController = async (
-  req: Request<{
-    id: string;
-  }>,
+  req: Request<{ id: string }>,
   res: Response,
   next: NextFunction,
 ) => {
   try {
     const id = Number(req.params.id);
+
     const result = await getOneUserService(id);
 
     res.status(200).json({
-      message: "User by id received successfully",
+      message: "User received successfully",
       data: result,
     });
-  } catch (error: any) {
-    next(error.message);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getUserPlacesController = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userId = Number(req.params.id);
+
+    const result = await getUserPlacesService(userId);
+
+    res.status(200).json({
+      message: "User places received successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
   }
 };
 
 export const deleteUserController = async (
-  req: Request<{
-    id: string;
-  }>,
+  req: Request<{ id: string }>,
   res: Response,
   next: NextFunction,
 ) => {
   try {
     const id = Number(req.params.id);
+
     const result = await deleteUserService(id);
 
     res.status(200).json({
-      message: "Users deleted successfully",
+      message: "User deleted successfully",
       deleted: result,
     });
-  } catch (error: any) {
-    next(error.message);
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -69,19 +91,17 @@ export const updateUserController = async (
     { id: string },
     {},
     {
-      name: string;
-      email: string;
-      password: string;
-      avatar: string;
+      name?: string;
+      email?: string;
     }
   >,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    const body = req.body;
     const id = Number(req.params.id);
-    const validation = userSchema.safeParse(body);
+
+    const validation = UpdateUserSchema.safeParse(req.body);
 
     if (!validation.success) {
       return res.status(400).json({
@@ -94,10 +114,9 @@ export const updateUserController = async (
 
     res.status(200).json({
       message: "User updated successfully",
-      updatedData: result,
-      updated_at: new Date(),
+      data: result,
     });
-  } catch (error: any) {
-    next(error.message);
+  } catch (error) {
+    next(error);
   }
 };

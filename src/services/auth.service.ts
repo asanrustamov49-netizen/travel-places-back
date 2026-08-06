@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { pool } from "../plugins/pg";
+import { apiErrors } from "../utils/apiErrors";
 
 interface IRegisterBody {
   name: string;
@@ -14,63 +15,56 @@ interface ILoginBody {
 }
 
 export const registerService = async (body: IRegisterBody) => {
-  const { name, email, password } = body;
-
-  // Проверяем, существует ли пользователь
   const existingUser = await pool.query(
     `
-      SELECT id
-      FROM users
-      WHERE email = $1
+      select id
+      from users
+      where email = $1
     `,
-    [email],
+    [body.email],
   );
 
   if (existingUser.rows.length > 0) {
-    throw new Error("User with this email already exists");
+    throw apiErrors.conflict("User with this email already exists");
   }
 
-  // Хешируем пароль
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const hashedPassword = await bcrypt.hash(body.password, 10);
 
-  // Создаём пользователя
   const result = await pool.query(
     `
-      INSERT INTO users (
+      insert into users (
         name,
         email,
         password
       )
-      VALUES ($1, $2, $3)
-      RETURNING id, name, email, avatar, created_at
+      values ($1, $2, $3)
+      returning id, name, email, created_at
     `,
-    [name, email, hashedPassword],
+    [body.name, body.email, hashedPassword],
   );
 
   return result.rows[0];
 };
 export const loginService = async (body: ILoginBody) => {
-  const { email, password } = body;
-
   const result = await pool.query(
     `
-      SELECT *
-      FROM users
-      WHERE email = $1
+      select *
+      from users
+      where email = $1
     `,
-    [email],
+    [body.email],
   );
 
   if (result.rows.length === 0) {
-    throw new Error("Invalid email or password");
+    throw apiErrors.badRequest("Invalid email or password");
   }
 
   const user = result.rows[0];
 
-  const isPasswordValid = await bcrypt.compare(password, user.password);
+  const isPasswordValid = await bcrypt.compare(body.password, user.password);
 
   if (!isPasswordValid) {
-    throw new Error("Invalid email or password");
+    throw apiErrors.badRequest("Invalid email or password");
   }
 
   const token = jwt.sign(
@@ -78,7 +72,7 @@ export const loginService = async (body: ILoginBody) => {
       id: user.id,
       email: user.email,
     },
-    process.env.JWT_SECRET as string,
+    "travel-places",
     {
       expiresIn: "7d",
     },
@@ -90,28 +84,48 @@ export const loginService = async (body: ILoginBody) => {
       id: user.id,
       name: user.name,
       email: user.email,
-      avatar: user.avatar,
     },
   };
 };
 export const profileService = async (userId: number) => {
   const result = await pool.query(
     `
-      SELECT
-        id,
-        name,
-        email,
-        avatar,
-        created_at,
-        updated_at
-      FROM users
-      WHERE id = $1
+    select
+      users.id,
+      users.name,
+      users.email,
+      users.created_at,
+      users.updated_at,
+      count(distinct places.id) as total_places,
+      coalesce(
+        json_agg(
+          distinct json_build_object(
+            'id', places.id,
+            'title', places.title,
+            'city', places.city,
+            'price', places.price,
+            'type', places.type,
+            'image', place_images.image_url
+          )
+        ) filter (where places.id is not null),
+        '[]'
+      ) as places
+    from users
+    left join places on places.user_id = users.id
+    left join place_images on place_images.place_id = places.id
+    where users.id = $1
+    group by
+      users.id,
+      users.name,
+      users.email,
+      users.created_at,
+      users.updated_at
     `,
     [userId],
   );
 
   if (result.rows.length === 0) {
-    throw new Error("User not found");
+    throw apiErrors.notFound("User not found");
   }
 
   return result.rows[0];

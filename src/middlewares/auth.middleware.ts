@@ -21,12 +21,8 @@ export const authMiddleware = (
     if (type !== "Bearer" || !token) {
       return next(apiErrors.unauthorized("Invalid authorization format"));
     }
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET as string,
-    ) as JwtPayload;
+    const decoded = jwt.verify(token, "travel-places") as JwtPayload;
     req.user = decoded;
-    
     next();
   } catch (error) {
     next(apiErrors.unauthorized("Invalid or expired token"));

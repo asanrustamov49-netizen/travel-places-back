@@ -17,9 +17,14 @@ export const userSchema = z.object({
     .string()
     .min(6, "Пароль должен содержать минимум 6 символов")
     .max(100, "Пароль не должен превышать 100 символов"),
-
-    avatar: z
-    .string().url("Введите корректный url")
 });
 
 export type UserSchema = z.infer<typeof userSchema>;
+
+export const UpdateUserSchema = z.object({
+  name: z.string().trim().min(2).max(50).optional(),
+
+  email: z.string().trim().email().optional(),
+});
+
+export type updateUserSchema = z.infer<typeof UpdateUserSchema>;

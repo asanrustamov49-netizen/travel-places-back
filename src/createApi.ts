@@ -10,6 +10,7 @@ import { logger } from "./middlewares/logger";
 const createApi = () => {
   const app = express();
   app.use(express.json());
+  app.use("/uploads", express.static("src/uploads"));
 
   app.use(
     cors({

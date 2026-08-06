@@ -1,17 +1,29 @@
 import { Router } from "express";
 import {
-  deletePlaceController,
-  getOnePlaceController,
-  getPlacesController,
   postPlaceController,
+  getOnePlaceController,
   updatePlaceController,
+  deletePlaceController,
+  getPlacesController,
 } from "../controllers/places.controller";
+import { uploadMiddleware } from "../middlewares/uploads";
+import { authMiddleware } from "../middlewares/auth.middleware";
 
 const router = Router();
-router.post("/", postPlaceController);
+router.post(
+  "/",
+  authMiddleware,
+  uploadMiddleware.array("images", 10),
+  postPlaceController,
+);
 router.get("/", getPlacesController);
 router.get("/:id", getOnePlaceController);
-router.delete("/:id", deletePlaceController);
-router.patch("/:id", updatePlaceController);
+router.delete("/:id", authMiddleware, deletePlaceController);
+router.patch(
+  "/:id",
+  authMiddleware,
+  uploadMiddleware.array("images", 10),
+  updatePlaceController,
+);
 
 export default router;
