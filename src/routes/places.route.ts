@@ -5,6 +5,7 @@ import {
   updatePlaceController,
   deletePlaceController,
   getPlacesController,
+  getPlacesFilteredController,
 } from "../controllers/places.controller";
 import { uploadMiddleware } from "../middlewares/uploads";
 import { authMiddleware } from "../middlewares/auth.middleware";
@@ -16,7 +17,7 @@ router.post(
   uploadMiddleware.array("images", 10),
   postPlaceController,
 );
-router.get("/", getPlacesController);
+router.get("/", getPlacesFilteredController);
 router.get("/:id", getOnePlaceController);
 router.delete("/:id", authMiddleware, deletePlaceController);
 router.patch(

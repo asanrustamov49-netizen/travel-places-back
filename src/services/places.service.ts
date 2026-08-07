@@ -214,7 +214,7 @@ export const getPlacesFilteredService = async ({
 
   const where =
     conditions.length > 0 ? `where ${conditions.join(" and ")}` : "";
-    
+
   // SORT
   let orderBy = "places.created_at desc";
 
@@ -240,6 +240,18 @@ export const getPlacesFilteredService = async ({
       orderBy = "places.created_at desc";
       break;
   }
+
+  const countResult = await pool.query(
+    `
+    select count(*) as total
+    from places
+    left join countries on places.country_id = countries.id
+    ${where}
+  `,
+    values,
+  );
+
+  const total = Number(countResult.rows[0].total);
 
   const offset = (page - 1) * limit;
 
@@ -277,7 +289,10 @@ export const getPlacesFilteredService = async ({
     values,
   );
 
-  return result.rows;
+  return {
+    places: result.rows,
+    total,
+  };
 };
 
 // export const uploadPlaceImagesService = async (

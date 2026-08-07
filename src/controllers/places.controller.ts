@@ -190,7 +190,13 @@ export const getPlacesFilteredController = async (
 
     res.status(200).json({
       message: "Places received successfully",
-      data: result,
+      data: result.places,
+      pagination: {
+        page: params.page,
+        limit: params.limit,
+        total: result.total,
+        pages: Math.ceil(result.total / params.limit),
+      },
     });
   } catch (error) {
     next(error);
