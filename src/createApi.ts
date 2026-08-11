@@ -4,6 +4,7 @@ import placesRouter from "./routes/places.route";
 import usersRouter from "./routes/users.route";
 import countriesRouter from "./routes/countries.route";
 import authRouter from "./routes/auth.route";
+import ratingsRouter from "./routes/rating.route";
 import { errorHandler } from "./middlewares/errorHandler";
 import { logger } from "./middlewares/logger";
 
@@ -21,9 +22,10 @@ const createApi = () => {
   app.use(logger);
 
   app.use("/places", placesRouter);
-  app.use("/countries", usersRouter);
-  app.use("/users", countriesRouter);
+  app.use("/users", usersRouter);
+  app.use("/countries", countriesRouter);
   app.use("/auth", authRouter);
+  app.use("/ratings", ratingsRouter);
 
   app.use(errorHandler);
   return app;

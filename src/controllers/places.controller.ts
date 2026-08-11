@@ -9,10 +9,11 @@ import {
   updatePlaceService,
 } from "../services/places.service";
 import {
+  createPlaceSchema,
   placeSchema,
   updatePlaceSchema,
-  UpdatePlaceSchema,
 } from "../validation/places.validate";
+import { apiErrors } from "../utils/apiErrors";
 
 export interface ICreatePlace {
   user_id: number;
@@ -31,13 +32,24 @@ export const postPlaceController = async (
   next: NextFunction,
 ) => {
   try {
-    const validation = placeSchema.safeParse(req.body);
+    console.log("🔥 CONTROLLER REACHED");
+    console.log("BODY:", req.body);
+    console.log("FILES:", req.files);
+
+    const validation = createPlaceSchema.safeParse(req.body);
 
     if (!validation.success) {
+      console.log("❌ VALIDATION ERROR:");
+      console.log(validation.error.issues);
+
       return res.status(400).json({
         message: "Validation failed",
         errors: validation.error.issues,
       });
+    }
+
+    if (!req.user) {
+      return next(apiErrors.unauthorized("Unauthorized"));
     }
 
     const userId = req.user.id;
@@ -45,13 +57,14 @@ export const postPlaceController = async (
     const images = files.map((file) => `/uploads/${file.filename}`);
     const result = await postPlaceService({
       ...validation.data,
-      user_id: userId,
+      user_id: userId!,
       images,
     });
 
     res.status(201).json({
-      message: "Place created successfully",
-      data: result,
+      message: "Places received successfully",
+      data: result.data,
+      pagination: result.pagination,
     });
   } catch (error) {
     next(error);
@@ -153,10 +166,6 @@ export const updatePlaceController = async (
   }
 };
 
-// ========================================
-// FILTER / SORT / SEARCH
-// ========================================
-
 export const getPlacesFilteredController = async (
   req: Request,
   res: Response,
@@ -190,13 +199,8 @@ export const getPlacesFilteredController = async (
 
     res.status(200).json({
       message: "Places received successfully",
-      data: result.places,
-      pagination: {
-        page: params.page,
-        limit: params.limit,
-        total: result.total,
-        pages: Math.ceil(result.total / params.limit),
-      },
+      data: result.data,
+      pagination: result.pagination,
     });
   } catch (error) {
     next(error);

@@ -4,9 +4,15 @@ import { apiErrors } from "../utils/apiErrors";
 import { PlaceSchema, UpdatePlaceSchema } from "../validation/places.validate";
 
 export const postPlaceService = async (body: ICreatePlace) => {
+  const countries = await pool.query(
+    "SELECT id, name FROM countries ORDER BY id",
+  );
+
+  console.log("🔥 COUNTRIES FROM BACKEND DB:", countries.rows);
+
   const result = await pool.query(
     `
-      insert into places
+      INSERT INTO places
       (
         user_id,
         country_id,
@@ -16,8 +22,8 @@ export const postPlaceService = async (body: ICreatePlace) => {
         type,
         price
       )
-      values ($1, $2, $3, $4, $5, $6, $7)
-      returning *
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
     `,
     [
       body.user_id,
@@ -43,8 +49,8 @@ export const getPlacesService = async () => {
         places.city,
         places.type,
         places.price,
-        places.rating,
-        places.best_season,
+        coalesce(avg(place_ratings.rating), 0) as rating,
+        count(place_ratings.id) as ratings_count,
         places.created_at,
         users.id as user_id,
         users.name as author_name,
@@ -53,13 +59,17 @@ export const getPlacesService = async () => {
       from places
       left join users on places.user_id = users.id
       left join countries on places.country_id = countries.id
+      left join place_ratings on places.id = place_ratings.place_id
+      group by
+        places.id,
+        users.id,
+        countries.id
       order by places.created_at desc
     `,
   );
 
   return result.rows;
 };
-
 export const getOnePlaceService = async (id: number) => {
   const result = await pool.query(
     `
@@ -70,8 +80,8 @@ export const getOnePlaceService = async (id: number) => {
         places.city,
         places.type,
         places.price,
-        places.rating,
-        places.best_season,
+        coalesce(avg(place_ratings.rating), 0) as rating,
+        count(place_ratings.id) as ratings_count,
         places.created_at,
         places.updated_at,
         users.id as user_id,
@@ -81,7 +91,12 @@ export const getOnePlaceService = async (id: number) => {
       from places
       left join users on places.user_id = users.id
       left join countries on places.country_id = countries.id
+      left join place_ratings on places.id = place_ratings.place_id
       where places.id = $1
+      group by
+        places.id,
+        users.id,
+        countries.id
     `,
     [id],
   );
@@ -117,19 +132,17 @@ export const updatePlaceService = async (
   const result = await pool.query(
     `
       update places
-      set user_id = $1, 
-      country_id = $2, 
-      title = $3, 
-      description = $4, 
-      city = $5,
-      type = $6,
-      price = $7,
-      updated_at = now()
-      where id = $8
+      set country_id = $1,
+          title = $2,
+          description = $3,
+          city = $4,
+          type = $5,
+          price = $6,
+          updated_at = now()
+      where id = $7
       returning *
     `,
     [
-      body.user_id,
       body.country_id,
       body.title,
       body.description,
@@ -146,10 +159,6 @@ export const updatePlaceService = async (
 
   return result.rows[0];
 };
-
-// ==============================
-// FILTER + SORT + PAGINATION
-// ==============================
 
 export interface IGetPlacesParams {
   type?: string;
@@ -175,34 +184,28 @@ export const getPlacesFilteredService = async ({
   const values: any[] = [];
   const conditions: string[] = [];
 
-  // TYPE
   if (type) {
     values.push(type);
     conditions.push(`places.type = $${values.length}`);
   }
 
-  // COUNTRY
   if (country_id) {
     values.push(country_id);
     conditions.push(`places.country_id = $${values.length}`);
   }
 
-  // MIN PRICE
   if (price_min) {
     values.push(price_min);
     conditions.push(`places.price >= $${values.length}`);
   }
 
-  // MAX PRICE
   if (price_max) {
     values.push(price_max);
     conditions.push(`places.price <= $${values.length}`);
   }
 
-  // SEARCH
   if (search) {
     values.push(`%${search}%`);
-
     conditions.push(`
       (
         places.title ilike $${values.length}
@@ -215,7 +218,6 @@ export const getPlacesFilteredService = async ({
   const where =
     conditions.length > 0 ? `where ${conditions.join(" and ")}` : "";
 
-  // SORT
   let orderBy = "places.created_at desc";
 
   switch (sort) {
@@ -228,7 +230,7 @@ export const getPlacesFilteredService = async ({
       break;
 
     case "rating":
-      orderBy = "places.rating desc";
+      orderBy = "rating desc";
       break;
 
     case "alphabetical":
@@ -263,35 +265,48 @@ export const getPlacesFilteredService = async ({
 
   const result = await pool.query(
     `
-      select
-        places.id,
-        places.title,
-        places.description,
-        places.city,
-        places.type,
-        places.price,
-        places.rating,
-        places.best_season,
-        places.created_at,
-        users.id as user_id,
-        users.name as author_name,
-        users.avatar as author_avatar,
-        countries.id as country_id,
-        countries.name as country_name
-      from places 
-      left join users on places.user_id = users.id
-      left join countries on places.country_id = countries.id
-      ${where}
-      order by ${orderBy}
-      limit $${limitIndex}
-      offset $${offsetIndex}
-    `,
+    select
+      places.id,
+      places.title,
+      places.description,
+      places.city,
+      places.type,
+      places.price,
+      coalesce(avg(place_ratings.rating), 0) as rating,
+      count(place_ratings.id) as ratings_count,
+      places.created_at,
+      users.id as user_id,
+      users.name as author_name,
+      users.avatar as author_avatar,
+      countries.id as country_id,
+      countries.name as country_name
+    from places
+    left join users
+      on places.user_id = users.id
+    left join countries
+      on places.country_id = countries.id
+    left join place_ratings
+      on places.id = place_ratings.place_id
+    ${where}
+    group by
+      places.id,
+      users.id,
+      countries.id
+    order by ${orderBy}
+    limit $${limitIndex}
+    offset $${offsetIndex}
+  `,
     values,
   );
 
   return {
-    places: result.rows,
-    total,
+    data: result.rows,
+    pagination: {
+      total,
+      page,
+      limit,
+      pages: Math.ceil(total / limit),
+    },
   };
 };
 

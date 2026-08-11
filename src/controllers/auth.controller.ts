@@ -5,6 +5,7 @@ import {
   profileService,
 } from "../services/auth.service";
 import { loginSchema, registerSchema } from "../validation/auth.validate";
+import { apiErrors } from "../utils/apiErrors";
 
 export const registerController = async (
   req: Request,
@@ -68,6 +69,10 @@ export const profileController = async (
   next: NextFunction,
 ) => {
   try {
+    if (!req.user) {
+      return next(apiErrors.unauthorized("Unauthorized"));
+    }
+
     const userId = req.user.id;
 
     const result = await profileService(userId);
