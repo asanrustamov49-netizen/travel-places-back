@@ -5,11 +5,12 @@ import {
   updateRatingController,
   deleteRatingController,
 } from "../controllers/rating.controller";
+import { authMiddleware } from "../middlewares/auth.middleware";
 
 const router = Router();
-router.post("/:placeId", postRatingController);
+router.post("/:placeId", authMiddleware, postRatingController);
 router.get("/:placeId", getPlaceRatingsController);
-router.patch("/:placeId", updateRatingController);
-router.delete("/:placeId", deleteRatingController);
+router.patch("/:placeId", authMiddleware, updateRatingController);
+router.delete("/:placeId", authMiddleware, deleteRatingController);
 
 export default router;

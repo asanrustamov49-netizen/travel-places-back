@@ -18,11 +18,17 @@ export const getUsersController = async (
   next: NextFunction,
 ) => {
   try {
-    const result = await getUsersService();
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 6;
+    const search =
+      typeof req.query.search === "string" ? req.query.search : undefined;
+
+    const result = await getUsersService(page, limit, search);
 
     res.status(200).json({
-      message: "Users received successfully",
-      data: result,
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
     });
   } catch (error) {
     next(error);

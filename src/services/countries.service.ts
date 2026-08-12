@@ -16,7 +16,7 @@ export const getOneCountryService = async (id: number) => {
     [id],
   );
 
-  if (!result.rows[0].id) throw apiErrors.notFound("ID not found!");
+  if (!result.rows.length) throw apiErrors.notFound("Country not found!");
 
   return result.rows[0];
 };

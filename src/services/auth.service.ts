@@ -74,7 +74,7 @@ export const loginService = async (body: ILoginBody) => {
     },
     "travel-places",
     {
-      expiresIn: "7d",
+      expiresIn: "1d",
     },
   );
 
@@ -90,36 +90,68 @@ export const loginService = async (body: ILoginBody) => {
 export const profileService = async (userId: number) => {
   const result = await pool.query(
     `
-    select
-      users.id,
-      users.name,
-      users.email,
-      users.created_at,
-      users.updated_at,
-      count(distinct places.id) as total_places,
-      coalesce(
-        json_agg(
-          distinct json_build_object(
-            'id', places.id,
-            'title', places.title,
-            'city', places.city,
-            'price', places.price,
-            'type', places.type,
-            'image', place_images.image_url
-          )
-        ) filter (where places.id is not null),
-        '[]'
-      ) as places
-    from users
-    left join places on places.user_id = users.id
-    left join place_images on place_images.place_id = places.id
-    where users.id = $1
-    group by
-      users.id,
-      users.name,
-      users.email,
-      users.created_at,
-      users.updated_at
+      SELECT
+        users.id,
+        users.name,
+        users.email,
+        users.created_at,
+        users.updated_at,
+
+        COUNT(DISTINCT places.id) AS total_places,
+
+        COALESCE(
+          jsonb_agg(
+            jsonb_build_object(
+              'id', places.id,
+              'title', places.title,
+              'description', places.description,
+              'city', places.city,
+              'type', places.type,
+              'price', places.price,
+              'rating', COALESCE(ratings.rating, 0),
+              'country_id', countries.id,
+              'country_name', countries.name,
+              'image',
+                CASE
+                  WHEN place_images.id IS NOT NULL THEN
+                    jsonb_build_object(
+                      'id', place_images.id,
+                      'image_url', place_images.image_url
+                    )
+                  ELSE NULL
+                END
+            )
+          ) FILTER (WHERE places.id IS NOT NULL),
+          '[]'::jsonb
+        ) AS places
+
+      FROM users
+
+      LEFT JOIN places
+        ON places.user_id = users.id
+
+      LEFT JOIN countries
+        ON places.country_id = countries.id
+
+      LEFT JOIN place_images
+        ON place_images.place_id = places.id
+
+      LEFT JOIN LATERAL (
+        SELECT
+          AVG(pr.rating) AS rating
+        FROM place_ratings pr
+        WHERE pr.place_id = places.id
+      ) ratings
+        ON true
+
+      WHERE users.id = $1
+
+      GROUP BY
+        users.id,
+        users.name,
+        users.email,
+        users.created_at,
+        users.updated_at
     `,
     [userId],
   );

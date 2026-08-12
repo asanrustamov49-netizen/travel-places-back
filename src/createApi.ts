@@ -2,9 +2,11 @@ import express from "express";
 import cors from "cors";
 import placesRouter from "./routes/places.route";
 import usersRouter from "./routes/users.route";
+import bookingsRouter from "./routes/booking.route";
 import countriesRouter from "./routes/countries.route";
 import authRouter from "./routes/auth.route";
 import ratingsRouter from "./routes/rating.route";
+import adminRouter from "./routes/admin.route";
 import { errorHandler } from "./middlewares/errorHandler";
 import { logger } from "./middlewares/logger";
 
@@ -15,7 +17,7 @@ const createApi = () => {
 
   app.use(
     cors({
-      origin: "http://localhost:3000",
+      origin: process.env.FRONTEND_URL ?? "http://localhost:3000",
     }),
   );
 
@@ -26,6 +28,8 @@ const createApi = () => {
   app.use("/countries", countriesRouter);
   app.use("/auth", authRouter);
   app.use("/ratings", ratingsRouter);
+  app.use("/admin", adminRouter);
+  app.use("/bookings", bookingsRouter);
 
   app.use(errorHandler);
   return app;

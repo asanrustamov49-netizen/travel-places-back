@@ -4,12 +4,6 @@ import { apiErrors } from "../utils/apiErrors";
 import { PlaceSchema, UpdatePlaceSchema } from "../validation/places.validate";
 
 export const postPlaceService = async (body: ICreatePlace) => {
-  const countries = await pool.query(
-    "SELECT id, name FROM countries ORDER BY id",
-  );
-
-  console.log("🔥 COUNTRIES FROM BACKEND DB:", countries.rows);
-
   const result = await pool.query(
     `
       INSERT INTO places
@@ -36,7 +30,21 @@ export const postPlaceService = async (body: ICreatePlace) => {
     ],
   );
 
-  return result.rows[0];
+  const place = result.rows[0];
+
+  if (body.images.length > 0) {
+    const values = body.images.flatMap((imageUrl) => [place.id, imageUrl]);
+    const placeholders = body.images
+      .map((_, index) => `($${index * 2 + 1}, $${index * 2 + 2})`)
+      .join(", ");
+
+    await pool.query(
+      `INSERT INTO place_images (place_id, image_url) VALUES ${placeholders}`,
+      values,
+    );
+  }
+
+  return place;
 };
 
 export const getPlacesService = async () => {
@@ -108,14 +116,14 @@ export const getOnePlaceService = async (id: number) => {
   return result.rows[0];
 };
 
-export const deletePlaceService = async (id: number) => {
+export const deletePlaceService = async (id: number, userId: number) => {
   const result = await pool.query(
     `
       delete from places
-      where id = $1
+      where id = $1 and user_id = $2
       returning *
     `,
-    [id],
+    [id, userId],
   );
 
   if (!result.rows.length) {
@@ -127,6 +135,7 @@ export const deletePlaceService = async (id: number) => {
 
 export const updatePlaceService = async (
   id: number,
+  userId: number,
   body: Partial<UpdatePlaceSchema>,
 ) => {
   const result = await pool.query(
@@ -139,7 +148,7 @@ export const updatePlaceService = async (
           type = $5,
           price = $6,
           updated_at = now()
-      where id = $7
+      where id = $7 and user_id = $8
       returning *
     `,
     [
@@ -150,6 +159,7 @@ export const updatePlaceService = async (
       body.type,
       body.price,
       id,
+      userId,
     ],
   );
 
@@ -277,7 +287,6 @@ export const getPlacesFilteredService = async ({
       places.created_at,
       users.id as user_id,
       users.name as author_name,
-      users.avatar as author_avatar,
       countries.id as country_id,
       countries.name as country_name
     from places

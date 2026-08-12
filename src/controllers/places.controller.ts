@@ -32,14 +32,9 @@ export const postPlaceController = async (
   next: NextFunction,
 ) => {
   try {
-    console.log("🔥 CONTROLLER REACHED");
-    console.log("BODY:", req.body);
-    console.log("FILES:", req.files);
-
     const validation = createPlaceSchema.safeParse(req.body);
 
     if (!validation.success) {
-      console.log("❌ VALIDATION ERROR:");
       console.log(validation.error.issues);
 
       return res.status(400).json({
@@ -53,7 +48,7 @@ export const postPlaceController = async (
     }
 
     const userId = req.user.id;
-    const files = req.files as Express.Multer.File[];
+    const files = (req.files as Express.Multer.File[] | undefined) ?? [];
     const images = files.map((file) => `/uploads/${file.filename}`);
     const result = await postPlaceService({
       ...validation.data,
@@ -63,8 +58,7 @@ export const postPlaceController = async (
 
     res.status(201).json({
       message: "Places received successfully",
-      data: result.data,
-      pagination: result.pagination,
+      data: result,
     });
   } catch (error) {
     next(error);
@@ -115,7 +109,11 @@ export const deletePlaceController = async (
   try {
     const id = Number(req.params.id);
 
-    const result = await deletePlaceService(id);
+    if (!req.user) {
+      return next(apiErrors.unauthorized("Unauthorized"));
+    }
+
+    const result = await deletePlaceService(id, req.user.id);
 
     res.status(200).json({
       message: "Place deleted successfully",
@@ -155,7 +153,11 @@ export const updatePlaceController = async (
       });
     }
 
-    const result = await updatePlaceService(id, validation.data);
+    if (!req.user) {
+      return next(apiErrors.unauthorized("Unauthorized"));
+    }
+
+    const result = await updatePlaceService(id, req.user.id, validation.data);
 
     res.status(200).json({
       message: "Place updated successfully",

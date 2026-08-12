@@ -8,27 +8,21 @@ import {
 import { apiErrors } from "../utils/apiErrors";
 
 export const postRatingController = async (
-  req: Request<
-    { placeId: string },
-    {},
-    {
-      rating: number;
-    }
-  >,
+  req: Request<{ placeId: string }, {}, { rating: number }>,
   res: Response,
   next: NextFunction,
 ) => {
   try {
+
     if (!req.user) {
       return next(apiErrors.unauthorized("Unauthorized"));
     }
 
     const userId = req.user.id;
     const placeId = Number(req.params.placeId);
-
     const result = await postRatingService(userId, placeId, req.body.rating);
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Rating added successfully",
       data: result,
     });

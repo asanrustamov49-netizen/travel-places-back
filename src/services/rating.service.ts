@@ -50,6 +50,7 @@ export const postRatingService = async (
     [userId, placeId, rating],
   );
 
+
   return result.rows[0];
 };
 
@@ -69,11 +70,11 @@ export const getPlaceRatingsService = async (placeId: number) => {
 
   const result = await pool.query(
     `
-      select
-        coalesce(avg(rating), 0) as rating,
-        count(id) as ratings_count
-      from place_ratings
-      where place_id = $1
+     SELECT
+       COALESCE(ROUND(AVG(rating), 1), 0) AS rating,
+       COUNT(id) AS ratings_count
+      FROM place_ratings
+      WHERE place_id = $1
     `,
     [placeId],
   );
