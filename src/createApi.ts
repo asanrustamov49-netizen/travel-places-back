@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import path from "path";
 import placesRouter from "./routes/places.route";
 import usersRouter from "./routes/users.route";
 import bookingsRouter from "./routes/booking.route";
@@ -13,7 +14,7 @@ import { logger } from "./middlewares/logger";
 const createApi = () => {
   const app = express();
   app.use(express.json());
-  app.use("/uploads", express.static("src/uploads"));
+  app.use("/uploads", express.static(path.join(process.cwd(), "src/uploads")));
 
   app.use(
     cors({

@@ -48,63 +48,129 @@ export const postPlaceService = async (body: ICreatePlace) => {
 };
 
 export const getPlacesService = async () => {
-  const result = await pool.query(
-    `
-      select
-        places.id,
-        places.title,
-        places.description,
-        places.city,
-        places.type,
-        places.price,
-        coalesce(avg(place_ratings.rating), 0) as rating,
-        count(place_ratings.id) as ratings_count,
-        places.created_at,
-        users.id as user_id,
-        users.name as author_name,
-        countries.id as country_id,
-        countries.name as country_name
-      from places
-      left join users on places.user_id = users.id
-      left join countries on places.country_id = countries.id
-      left join place_ratings on places.id = place_ratings.place_id
-      group by
-        places.id,
-        users.id,
-        countries.id
-      order by places.created_at desc
-    `,
-  );
+  const result = await pool.query(`
+    SELECT
+      places.id,
+      places.title,
+      places.description,
+      places.city,
+      places.type,
+      places.price,
+
+      COALESCE(AVG(place_ratings.rating), 0) AS rating,
+      COUNT(place_ratings.id) AS ratings_count,
+
+      places.created_at,
+
+      users.id AS user_id,
+      users.name AS author_name,
+
+      countries.id AS country_id,
+      countries.name AS country_name,
+
+      CASE
+        WHEN place_image.id IS NOT NULL THEN
+          json_build_object(
+            'id', place_image.id,
+            'image_url', place_image.image_url
+          )
+        ELSE NULL
+      END AS image
+
+    FROM places
+
+    LEFT JOIN users
+      ON places.user_id = users.id
+
+    LEFT JOIN countries
+      ON places.country_id = countries.id
+
+    LEFT JOIN place_ratings
+      ON places.id = place_ratings.place_id
+
+    LEFT JOIN LATERAL (
+      SELECT
+        id,
+        image_url
+      FROM place_images
+      WHERE place_images.place_id = places.id
+      ORDER BY place_images.created_at ASC
+      LIMIT 1
+    ) AS place_image ON TRUE
+
+    GROUP BY
+      places.id,
+      users.id,
+      countries.id,
+      place_image.id,
+      place_image.image_url
+
+    ORDER BY places.created_at DESC
+  `);
 
   return result.rows;
 };
 export const getOnePlaceService = async (id: number) => {
   const result = await pool.query(
     `
-      select
+      SELECT
         places.id,
         places.title,
         places.description,
         places.city,
         places.type,
         places.price,
-        coalesce(avg(place_ratings.rating), 0) as rating,
-        count(place_ratings.id) as ratings_count,
+
+        COALESCE(AVG(place_ratings.rating), 0) AS rating,
+        COUNT(place_ratings.id) AS ratings_count,
+
         places.created_at,
         places.updated_at,
-        users.id as user_id,
-        users.name as author_name,
-        countries.id as country_id,
-        countries.name as country_name
-      from places
-      left join users on places.user_id = users.id
-      left join countries on places.country_id = countries.id
-      left join place_ratings on places.id = place_ratings.place_id
-      where places.id = $1
-      group by
+
+        users.id AS user_id,
+        users.name AS author_name,
+
+        countries.id AS country_id,
+        countries.name AS country_name,
+
+        CASE
+          WHEN place_image.id IS NOT NULL THEN
+            json_build_object(
+              'id', place_image.id,
+              'image_url', place_image.image_url
+            )
+          ELSE NULL
+        END AS image
+
+      FROM places
+
+      LEFT JOIN users
+        ON places.user_id = users.id
+
+      LEFT JOIN countries
+        ON places.country_id = countries.id
+
+      LEFT JOIN place_ratings
+        ON places.id = place_ratings.place_id
+
+      LEFT JOIN LATERAL (
+        SELECT
+          id,
+          image_url
+        FROM place_images
+        WHERE place_images.place_id = places.id
+        ORDER BY place_images.created_at ASC
+        LIMIT 1
+      ) AS place_image ON TRUE
+
+      WHERE places.id = $1
+
+      GROUP BY
         places.id,
         users.id,
-        countries.id
+        countries.id,
+        place_image.id,
+        place_image.image_url
     `,
     [id],
   );
@@ -275,35 +341,66 @@ export const getPlacesFilteredService = async ({
 
   const result = await pool.query(
     `
-    select
+    SELECT
       places.id,
       places.title,
       places.description,
       places.city,
       places.type,
       places.price,
-      coalesce(avg(place_ratings.rating), 0) as rating,
-      count(place_ratings.id) as ratings_count,
+      COALESCE(AVG(place_ratings.rating), 0) AS rating,
+      COUNT(place_ratings.id) AS ratings_count,
       places.created_at,
-      users.id as user_id,
-      users.name as author_name,
-      countries.id as country_id,
-      countries.name as country_name
-    from places
-    left join users
-      on places.user_id = users.id
-    left join countries
-      on places.country_id = countries.id
-    left join place_ratings
-      on places.id = place_ratings.place_id
+
+      users.id AS user_id,
+      users.name AS author_name,
+
+      countries.id AS country_id,
+      countries.name AS country_name,
+
+      CASE
+        WHEN place_image.id IS NOT NULL THEN
+          json_build_object(
+            'id', place_image.id,
+            'image_url', place_image.image_url
+          )
+        ELSE NULL
+      END AS image
+
+    FROM places
+
+    LEFT JOIN users
+      ON places.user_id = users.id
+
+    LEFT JOIN countries
+      ON places.country_id = countries.id
+
+    LEFT JOIN place_ratings
+      ON places.id = place_ratings.place_id
+
+    LEFT JOIN LATERAL (
+      SELECT
+        id,
+        image_url
+      FROM place_images
+      WHERE place_images.place_id = places.id
+      ORDER BY place_images.created_at ASC
+      LIMIT 1
+    ) AS place_image ON TRUE
+
     ${where}
-    group by
+
+    GROUP BY
       places.id,
       users.id,
-      countries.id
-    order by ${orderBy}
-    limit $${limitIndex}
-    offset $${offsetIndex}
+      countries.id,
+      place_image.id,
+      place_image.image_url
+
+    ORDER BY ${orderBy}
+
+    LIMIT $${limitIndex}
+    OFFSET $${offsetIndex}
   `,
     values,
   );
