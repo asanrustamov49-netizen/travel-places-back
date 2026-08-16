@@ -1,4 +1,6 @@
+import { NextFunction } from "express";
 import { pool } from "../plugins/pg";
+import { apiErrors } from "../utils/apiErrors";
 
 interface ICreateBookingData {
   check_in: string;
@@ -10,48 +12,33 @@ export const createBooking = async (
   userId: number,
   placeId: number,
   data: ICreateBookingData,
+  next: NextFunction,
 ) => {
-  if (!Number.isInteger(placeId) || placeId <= 0) {
-    const error = new Error("Invalid placeId");
-    (error as any).statusCode = 400;
-    throw error;
-  }
-
   const client = await pool.connect();
 
   try {
-    await client.query("BEGIN");
-
-    // 1. Получаем место
     const placeResult = await client.query(
       `
-        SELECT id, title, price
-        FROM places
-        WHERE id = $1;
+        select id, title, price
+        from places
+        where id = $1;
       `,
       [placeId],
     );
 
-    if (placeResult.rows.length === 0) {
-      const error = new Error("Place not found");
-      (error as any).statusCode = 404;
-      throw error;
-    }
-
     const place = placeResult.rows[0];
 
-    // 2. Проверяем пересечение брони
     const conflictResult = await client.query(
       `
-        SELECT id
-        FROM bookings
-        WHERE place_id = $1
-          AND status IN ('pending', 'confirmed')
-          AND NOT (
+        select id
+        from bookings
+        where place_id = $1
+          and status in ('pending', 'confirmed')
+          and not (
             check_out <= $2::date
-            OR check_in >= $3::date
+            or check_in >= $3::date
           )
-        LIMIT 1;
+        limit 1;
       `,
       [placeId, data.check_in, data.check_out],
     );
@@ -81,7 +68,7 @@ export const createBooking = async (
     // 5. Создаём бронь
     const bookingResult = await client.query(
       `
-        INSERT INTO bookings (
+        insert into bookings (
           user_id,
           place_id,
           check_in,
@@ -90,8 +77,8 @@ export const createBooking = async (
           total_price,
           status
         )
-        VALUES ($1, $2, $3, $4, $5, $6, 'pending')
-        RETURNING *;
+        values ($1, $2, $3, $4, $5, $6, 'pending')
+        returning *;
       `,
       [
         userId,
@@ -103,21 +90,16 @@ export const createBooking = async (
       ],
     );
 
-    await client.query("COMMIT");
-
     return bookingResult.rows[0];
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
+  } catch (error: any) {
+    next(error.message);
   }
 };
 
 export const getMyBookings = async (userId: number) => {
   const result = await pool.query(
     `
-      SELECT
+      select
         bookings.id,
         bookings.check_in,
         bookings.check_out,
@@ -125,25 +107,16 @@ export const getMyBookings = async (userId: number) => {
         bookings.total_price,
         bookings.status,
         bookings.created_at,
-
-        places.id AS place_id,
-        places.title AS place_title,
-        places.city AS place_city,
-        places.price AS price_per_night,
-
-        countries.name AS country_name
-
-      FROM bookings
-
-      JOIN places
-        ON places.id = bookings.place_id
-
-      JOIN countries
-        ON countries.id = places.country_id
-
-      WHERE bookings.user_id = $1
-
-      ORDER BY bookings.created_at DESC;
+        places.id as place_id,
+        places.title as place_title,
+        places.city as place_city,
+        places.price as price_per_night,
+        countries.name as country_name
+      from bookings
+      join places on places.id = bookings.place_id
+      join countries on countries.id = places.country_id
+      where bookings.user_id = $1
+      order by bookings.created_at desc;
     `,
     [userId],
   );
@@ -153,14 +126,13 @@ export const getMyBookings = async (userId: number) => {
 
 export const getOneMyBooking = async (userId: number, bookingId: number) => {
   if (!Number.isInteger(bookingId) || bookingId <= 0) {
-    const error = new Error("Invalid bookingId");
-    (error as any).statusCode = 400;
+    const error = apiErrors.badRequest("Invalid bookingId!");
     throw error;
   }
 
   const result = await pool.query(
     `
-      SELECT
+      select
         bookings.id,
         bookings.check_in,
         bookings.check_out,
@@ -168,31 +140,22 @@ export const getOneMyBooking = async (userId: number, bookingId: number) => {
         bookings.total_price,
         bookings.status,
         bookings.created_at,
-
-        places.id AS place_id,
-        places.title AS place_title,
-        places.city AS place_city,
-        places.price AS price_per_night,
-
-        countries.name AS country_name
-
-      FROM bookings
-
-      JOIN places
-        ON places.id = bookings.place_id
-
-      JOIN countries
-        ON countries.id = places.country_id
-
-      WHERE bookings.id = $1
-        AND bookings.user_id = $2;
+        places.id as place_id,
+        places.title as place_title,
+        places.city as place_city,
+        places.price as price_per_night,
+        countries.name as country_name
+      from bookings
+      join places on places.id = bookings.place_id
+      join countries on countries.id = places.country_id
+      where bookings.id = $1
+        and bookings.user_id = $2;
     `,
     [bookingId, userId],
   );
 
   if (result.rows.length === 0) {
-    const error = new Error("Booking not found");
-    (error as any).statusCode = 404;
+    const error = apiErrors.notFound("Booking not found!");
     throw error;
   }
 

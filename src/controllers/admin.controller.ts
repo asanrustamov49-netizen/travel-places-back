@@ -2,18 +2,18 @@ import { NextFunction, Request, Response } from "express";
 import { getDashboardStatisticsService } from "../services/admin.service";
 
 export const getDashboardStatisticsController = async (
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    const statistics = await getDashboardStatisticsService();
+    const result = await getDashboardStatisticsService();
 
     res.status(200).json({
       message: "Statistics received successfully",
-      data: statistics,
+      data: result,
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    next(error.message);
   }
 };

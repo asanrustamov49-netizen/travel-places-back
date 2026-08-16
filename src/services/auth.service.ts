@@ -59,9 +59,7 @@ export const loginService = async (body: ILoginBody) => {
     throw apiErrors.badRequest("Invalid email or password");
   }
 
-  const user = result.rows[0];
-
-  const isPasswordValid = await bcrypt.compare(body.password, user.password);
+  const isPasswordValid = await bcrypt.compare(body.password, result.rows[0].password);
 
   if (!isPasswordValid) {
     throw apiErrors.badRequest("Invalid email or password");
@@ -69,8 +67,8 @@ export const loginService = async (body: ILoginBody) => {
 
   const token = jwt.sign(
     {
-      id: user.id,
-      email: user.email,
+      id: result.rows[0].id,
+      email: result.rows[0].email,
     },
     "travel-places",
     {
@@ -81,25 +79,23 @@ export const loginService = async (body: ILoginBody) => {
   return {
     token,
     user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
+      id: result.rows[0].id,
+      name: result.rows[0].name,
+      email: result.rows[0].email,
     },
   };
 };
 export const profileService = async (userId: number) => {
   const result = await pool.query(
     `
-      SELECT
+      select
         users.id,
         users.name,
         users.email,
         users.created_at,
         users.updated_at,
-
-        COUNT(DISTINCT places.id) AS total_places,
-
-        COALESCE(
+        count(distinct places.id) as total_places,
+        coalesce(
           jsonb_agg(
             jsonb_build_object(
               'id', places.id,
@@ -108,45 +104,43 @@ export const profileService = async (userId: number) => {
               'city', places.city,
               'type', places.type,
               'price', places.price,
-              'rating', COALESCE(ratings.rating, 0),
+              'rating', coalesce(ratings.rating, 0),
               'country_id', countries.id,
               'country_name', countries.name,
               'image',
-                CASE
-                  WHEN place_images.id IS NOT NULL THEN
+                case
+                  when place_image.id is not null then
                     jsonb_build_object(
-                      'id', place_images.id,
-                      'image_url', place_images.image_url
+                      'id', place_image.id,
+                      'image_url', place_image.image_url
                     )
-                  ELSE NULL
-                END
+                  else null
+                end
             )
-          ) FILTER (WHERE places.id IS NOT NULL),
+          ) filter (where places.id is not null),
           '[]'::jsonb
-        ) AS places
-
-      FROM users
-
-      LEFT JOIN places
-        ON places.user_id = users.id
-
-      LEFT JOIN countries
-        ON places.country_id = countries.id
-
-      LEFT JOIN place_images
-        ON place_images.place_id = places.id
-
-      LEFT JOIN LATERAL (
-        SELECT
-          AVG(pr.rating) AS rating
-        FROM place_ratings pr
-        WHERE pr.place_id = places.id
+        ) as places
+      from users
+      left join places on places.user_id = users.id
+      left join countries on places.country_id = countries.id
+      left join lateral (
+        select
+          id,
+          image_url
+        from place_images
+        where place_images.place_id = places.id
+        order by place_images.created_at asc
+        limit 1
+      ) as place_image on true
+      left join lateral (
+        select
+          avg(place_ratings.rating) as rating
+        from place_ratings place_ratings
+        where place_ratings.place_id = places.id
       ) ratings
-        ON true
-
-      WHERE users.id = $1
-
-      GROUP BY
+        on true
+      where users.id = $1
+      group by
         users.id,
         users.name,
         users.email,

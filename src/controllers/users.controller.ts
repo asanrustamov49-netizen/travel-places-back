@@ -2,14 +2,11 @@ import { NextFunction, Request, Response } from "express";
 import {
   deleteUserService,
   getOneUserService,
-  getUserPlacesService,
   getUsersService,
   updateUserService,
 } from "../services/users.service";
 import {
   UpdateUserSchema,
-  updateUserSchema,
-  userSchema,
 } from "../validation/users.validate";
 
 export const getUsersController = async (
@@ -26,12 +23,12 @@ export const getUsersController = async (
     const result = await getUsersService(page, limit, search);
 
     res.status(200).json({
-      success: true,
+      message: "Users received successfully",
       data: result.data,
       pagination: result.pagination,
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    next(error.message);
   }
 };
 
@@ -49,27 +46,8 @@ export const getOneUserController = async (
       message: "User received successfully",
       data: result,
     });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const getUserPlacesController = async (
-  req: Request<{ id: string }>,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    const userId = Number(req.params.id);
-
-    const result = await getUserPlacesService(userId);
-
-    res.status(200).json({
-      message: "User places received successfully",
-      data: result,
-    });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    next(error.message);
   }
 };
 
@@ -87,8 +65,8 @@ export const deleteUserController = async (
       message: "User deleted successfully",
       deleted: result,
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    next(error.message);
   }
 };
 
@@ -122,7 +100,7 @@ export const updateUserController = async (
       message: "User updated successfully",
       data: result,
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    next(error.message);
   }
 };

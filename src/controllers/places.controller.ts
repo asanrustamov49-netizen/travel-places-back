@@ -3,14 +3,12 @@ import {
   deletePlaceService,
   getOnePlaceService,
   getPlacesFilteredService,
-  getPlacesService,
   IGetPlacesParams,
   postPlaceService,
   updatePlaceService,
 } from "../services/places.service";
 import {
   createPlaceSchema,
-  placeSchema,
   updatePlaceSchema,
 } from "../validation/places.validate";
 import { apiErrors } from "../utils/apiErrors";
@@ -35,8 +33,6 @@ export const postPlaceController = async (
     const validation = createPlaceSchema.safeParse(req.body);
 
     if (!validation.success) {
-      console.log(validation.error.issues);
-
       return res.status(400).json({
         message: "Validation failed",
         errors: validation.error.issues,
@@ -60,25 +56,8 @@ export const postPlaceController = async (
       message: "Places received successfully",
       data: result,
     });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const getPlacesController = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    const result = await getPlacesService();
-
-    res.status(200).json({
-      message: "Places received successfully",
-      data: result,
-    });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    next(error.message);
   }
 };
 
@@ -96,8 +75,8 @@ export const getOnePlaceController = async (
       message: "Place received successfully",
       data: result,
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    next(error.message);
   }
 };
 
@@ -119,8 +98,8 @@ export const deletePlaceController = async (
       message: "Place deleted successfully",
       deleted: result,
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    next(error.message);
   }
 };
 
@@ -135,7 +114,6 @@ export const updatePlaceController = async (
       city?: string;
       type?: "Beach" | "Culture" | "Adventure" | "Nature" | "City";
       price?: number;
-      best_season?: string;
     }
   >,
   res: Response,
@@ -163,8 +141,8 @@ export const updatePlaceController = async (
       message: "Place updated successfully",
       data: result,
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    next(error.message);
   }
 };
 
@@ -204,46 +182,7 @@ export const getPlacesFilteredController = async (
       data: result.data,
       pagination: result.pagination,
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    next(error.message);
   }
 };
-
-// export const uploadPlaceImagesController = async (
-//   req: Request<{ id: string }>,
-//   res: Response,
-//   next: NextFunction,
-// ) => {
-//   try {
-//     const placeId = Number(req.params.id);
-
-//     if (Number.isNaN(placeId)) {
-//       return res.status(400).json({
-//         message: "Invalid place ID",
-//       });
-//     }
-
-//     const files = req.files as Express.Multer.File[];
-
-//     if (!files || files.length === 0) {
-//       return res.status(400).json({
-//         message: "Images are required",
-//       });
-//     }
-
-//     const imagePaths = files.map((file) => `/uploads/${file.filename}`);
-
-//     // потом передаем imagePaths в service
-//     // const result = await uploadPlaceImagesService(
-//     //   placeId,
-//     //   imagePaths,
-//     // );
-
-//     res.status(201).json({
-//       message: "Images uploaded successfully",
-//       images: imagePaths,
-//     });
-//   } catch (error) {
-//     next(error);
-//   }
-// };

@@ -4,7 +4,6 @@ import {
   getOnePlaceController,
   updatePlaceController,
   deletePlaceController,
-  getPlacesController,
   getPlacesFilteredController,
 } from "../controllers/places.controller";
 import { uploadMiddleware } from "../middlewares/uploads";

@@ -1,5 +1,4 @@
 import { NextFunction, Request, Response } from "express";
-import { countrySchema } from "../validation/country.validate";
 import {
   getCountriesService,
   getOneCountryService,

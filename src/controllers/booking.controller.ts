@@ -13,19 +13,16 @@ export const postBookingController = async (
 ) => {
   try {
     const userId = req.user?.id;
-
     const placeId = Number(req.params.placeId);
-
     const validatedData = bookingSchema.parse(req.body);
-
-    const booking = await createBooking(userId!, placeId, validatedData);
+    const result = await createBooking(userId!, placeId, validatedData, next);
 
     return res.status(201).json({
       message: "Booking created successfully",
-      data: booking,
+      data: result,
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    next(error.message);
   }
 };
 
@@ -36,15 +33,14 @@ export const getMyBookingsController = async (
 ) => {
   try {
     const userId = req.user?.id;
-
-    const bookings = await getMyBookings(userId!);
+    const result = await getMyBookings(userId!);
 
     return res.status(200).json({
       message: "Bookings received successfully",
-      data: bookings,
+      data: result,
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    next(error.message);
   }
 };
 
@@ -55,16 +51,14 @@ export const getOneMyBookingController = async (
 ) => {
   try {
     const userId = req.user?.id;
-
     const bookingId = Number(req.params.bookingId);
-
-    const booking = await getOneMyBooking(userId!, bookingId);
+    const result = await getOneMyBooking(userId!, bookingId);
 
     return res.status(200).json({
       message: "Booking received successfully",
-      data: booking,
+      data: result,
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    next(error.message);
   }
 };

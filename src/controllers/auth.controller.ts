@@ -30,8 +30,8 @@ export const registerController = async (
       message: "User registered successfully",
       data: result,
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    next(error.message);
   }
 };
 
@@ -58,8 +58,8 @@ export const loginController = async (
       message: "Login successful",
       data: result,
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    next(error.message);
   }
 };
 
@@ -81,7 +81,7 @@ export const profileController = async (
       message: "Profile received successfully",
       data: result,
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    next(error.message);
   }
 };
