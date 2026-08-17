@@ -18,7 +18,7 @@ const createApi = () => {
 
   app.use(
     cors({
-      origin: "http://travel-places-front.vercel.app/",
+      origin: "http://travel-places-front.vercel.app",
     }),
   );
 
