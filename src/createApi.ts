@@ -14,11 +14,11 @@ import { logger } from "./middlewares/logger";
 const createApi = () => {
   const app = express();
   app.use(express.json());
-  app.use("/uploads", express.static(path.join(process.cwd(), "src/uploads")));
+  app.use("/uploads", express.static("src/uploads"));
 
   app.use(
     cors({
-      origin: "http://localhost:3000",
+      origin: "http://travel-places-front.vercel.app/",
     }),
   );
 
