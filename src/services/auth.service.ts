@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { pool } from "../plugins/pg";
 import { apiErrors } from "../utils/apiErrors";
+import { pool } from "../plugins/pg";
 
 interface IRegisterBody {
   name: string;
