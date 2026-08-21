@@ -18,7 +18,7 @@ const createApi = () => {
 
   app.use(
     cors({
-      origin: "http://travel-places-front.vercel.app",
+      origin: "https://travel-places-front.vercel.app",
     }),
   );
 
@@ -32,7 +32,7 @@ const createApi = () => {
   app.use("/admin", adminRouter);
   app.use("/bookings", bookingsRouter);
 
-  app.use(errorHandler);
+  app.use(errorHandler());
   return app;
 };
 
