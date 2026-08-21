@@ -4,6 +4,15 @@ export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-pool.connect().then(() => {
-  console.log("DB connected");
+pool.on("error", (err) => {
+  console.error("Unexpected error on idle client", err);
 });
+
+pool
+  .query("select 1")
+  .then(() => {
+    console.log("DB connected");
+  })
+  .catch((err) => {
+    console.error("Failed to connect to DB", err);
+  });
